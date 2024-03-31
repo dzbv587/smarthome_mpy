@@ -2,21 +2,23 @@ import lvgl as lv
 import time
 import network
 import urequests
-import dht
 from machine import Timer, Pin
 
 from const import *
 from connect_wifi import ConnectWIFI
+from sensor import TemperatureHumidity, Light
 
 class IndexPage():
     def __init__(self, scr):
         self.scr = scr
         self.time_now = time.localtime()
-        self.dh = dht.DHT11(Pin(5))
-        try:
-            self.dh.measure() # 第一次执行异常，第二次正常
-        except OSError as e:
-            self.dh.measure()
+        self.dht11 = TemperatureHumidity(TAH)
+        self.tem_hum = self.dht11.get_tem_hum()
+#         self.dh = dht.DHT11(Pin(5))
+#         try:
+#             self.dh.measure() # 第一次执行异常，第二次正常
+#         except OSError as e:
+#             self.dh.measure()
         self.wlan = network.WLAN(network.STA_IF) # 激活wifi
         self.wlan.active(True)
         # TODO: 连接wifi
@@ -147,7 +149,7 @@ class IndexPage():
         self.temp_label.add_style(style_temp_label, 0)
         self.temp_label.set_style_text_font(lv.font_montserrat_20, 0)
         self.temp_label.set_long_mode(lv.label.LONG.SCROLL_CIRCULAR)
-        self.temp_label.set_text('Tem:{0:0>2d}  Hum:{1:0>2d}'.format(self.dh.temperature(), self.dh.humidity()))
+        self.temp_label.set_text('Tem:{0:0>2d}  Hum:{1:0>2d}'.format(self.tem_hum['temperature'], self.tem_hum['humidity']))
         
         # home按钮
         style_home_btn = lv.style_t()
@@ -184,8 +186,8 @@ class IndexPage():
     
     def flush_dht(self, timer):
         """刷新温湿度标签"""
-        self.dh.measure()
-        self.temp_label.set_text('Tem:{0:0>2d}  Hum:{1:0>2d}'.format(self.dh.temperature(), self.dh.humidity()))
+        self.tem_hum = self.dht11.get_tem_hum()
+        self.temp_label.set_text('Tem:{0:0>2d}  Hum:{1:0>2d}'.format(self.tem_hum['temperature'], self.tem_hum['humidity']))
     
     def flush_weather(self, e=None):
         """更新天气图标"""

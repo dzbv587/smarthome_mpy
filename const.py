@@ -28,13 +28,6 @@ CLOUDY = {'少云', '晴间多云', '多云'}
 WINDY = {'有风', '平静', '微风', '和风', '清风', '强风', '劲风', '疾风', '大风'}
 TORNADO = {'烈风', '风暴', '狂爆风', '飓风', '热带风暴'}
 UNKNOWN = {'未知', '冷', '热'}
-# WEATHER_MAP = { '晴': 'lib/weather_1晴.png',
-#                 cloudy: 'lib/weather_2多云.png' for cloudy in CLOUDY,
-#                 '阴': 'lib/weather_3阴.png',
-#                 windy: 'lib/weather_23风.png' for windy in WINDY,
-#                 tornado: 'lib/weather_24.png' for tornado in TORNADO,
-#                 unknown: 'lib/weather_26.png' for unknown in UNKNOWN
-#     }
 WEATHER_MAP = { '晴': 'imgs/weather_1晴.png',
                 '阴': 'imgs/weather_3阴.png'
     }
@@ -42,3 +35,10 @@ WEATHER_MAP.update(dict.fromkeys(CLOUDY, 'imgs/weather_2多云.png' ))
 WEATHER_MAP.update(dict.fromkeys(WINDY, 'imgs/weather_23风.png'))
 WEATHER_MAP.update(dict.fromkeys(TORNADO, 'imgs/weather_24龙卷风.png'))
 WEATHER_MAP.update(dict.fromkeys(UNKNOWN, 'imgs/weather_26未知.png'))
+
+# 温湿度传感器引脚
+TAH = 1
+
+# IO扩展引脚
+IO_SCL = 3
+IO_SDA = 2
