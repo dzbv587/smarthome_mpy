@@ -166,6 +166,7 @@ class IndexPage():
         
         self.home_btn = lv.btn(self.scr)
         self.home_btn.add_style(style_home_btn, 0)
+        self.home_btn.add_event_cb(self.go_home,lv.EVENT.CLICKED, None)
     
         home_label = lv.label(self.home_btn)
         home_label.set_style_text_font(lv.font_montserrat_20, 0)
@@ -238,6 +239,11 @@ class IndexPage():
         self.flush_weather()
 
         
+    def go_home(self, e):
+        self.home_scr = lv.obj()
+        lv.scr_load(self.home_scr)
+#         wifi_page = ConnectWIFI(self.wifi_scr, self.wlan)
+#         wifi_page.back_btn.add_event_cb(self.back_index,lv.EVENT.CLICKED, None)
         
 
 
