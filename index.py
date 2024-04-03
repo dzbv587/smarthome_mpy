@@ -6,14 +6,20 @@ from machine import Timer, Pin
 
 from const import *
 from connect_wifi import ConnectWIFI
+from home import HomePage
 from sensor import TemperatureHumidity, Light
 
 class IndexPage():
     def __init__(self, scr):
         self.scr = scr
         self.time_now = time.localtime()
+        
+        self.bedroom_light = Light(BEDROOM_LIGHT)
+        self.bedroom_switch = Light(BEDROOM_SWITCH)
+        self.living_light = Light(LIVING_LIGHT)
+        self.kitchen_light = Light(KITCHEN_LIGHT)
         self.dht11 = TemperatureHumidity(TAH)
-        self.tem_hum = self.dht11.get_tem_hum()
+        
 #         self.dh = dht.DHT11(Pin(5))
 #         try:
 #             self.dh.measure() # 第一次执行异常，第二次正常
@@ -96,6 +102,7 @@ class IndexPage():
         self.weather_img.set_size(45, 45)
         self.weather_img.set_pos(10, -10)
         self.weather_img.set_size_mode(lv.img.SIZE_MODE.REAL)
+        self.weather_img.cache_set_size(7)
         
         # WIFI按钮
         style_wifi_btn = lv.style_t()
@@ -134,6 +141,7 @@ class IndexPage():
         self.wifi_img.set_size_mode(lv.img.SIZE_MODE.REAL)
         
         # 温湿度标签
+        self.tem_hum = self.dht11.get_tem_hum()
         style_temp_label = lv.style_t()
         style_temp_label.init()
         style_temp_label.set_radius(10)
@@ -240,7 +248,14 @@ class IndexPage():
 
         
     def go_home(self, e):
+        kwargs = {
+            'bedroom_light': self.bedroom_light,
+            'bedroom_switch': self.bedroom_switch,
+            'living_light': self.living_light,
+            'kitchen_light': self.kitchen_light,
+            }
         self.home_scr = lv.obj()
+        home_page = HomePage(self.home_scr, **kwargs)
         lv.scr_load(self.home_scr)
 #         wifi_page = ConnectWIFI(self.wifi_scr, self.wlan)
 #         wifi_page.back_btn.add_event_cb(self.back_index,lv.EVENT.CLICKED, None)

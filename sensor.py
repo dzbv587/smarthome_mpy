@@ -29,7 +29,7 @@ class TemperatureHumidity():
 
 class Light():
     """开关类设备"""
-    def __init__(self, power, is_sensitive):
+    def __init__(self, power, is_sensitive=False):
         """
         初始化开关类设备
         :param power:设备引脚

@@ -36,9 +36,32 @@ WEATHER_MAP.update(dict.fromkeys(WINDY, 'imgs/weather_23风.png'))
 WEATHER_MAP.update(dict.fromkeys(TORNADO, 'imgs/weather_24龙卷风.png'))
 WEATHER_MAP.update(dict.fromkeys(UNKNOWN, 'imgs/weather_26未知.png'))
 
-# 温湿度传感器引脚
-TAH = 1
-
 # IO扩展引脚
 IO_SCL = 3
 IO_SDA = 2
+
+# 卧室
+# 灯引脚
+BEDROOM_LIGHT = 0
+# 插座引脚
+BEDROOM_SWITCH = 1
+
+# 客厅
+# 光敏传感器
+LIVING_LIGHT_SEN = 2
+# 灯引脚
+LIVING_LIGHT = 3
+# 风扇引脚
+FAN = 2
+# 温湿度传感器引脚
+TAH = 1
+
+# 窗帘电机引脚
+CURTAIN = 3 
+# 窗户舵机引脚
+WINDOW = 4
+# 雨水传感器引脚
+RAIN_SEN = 5
+# 厨房
+# 灯引脚
+KITCHEN_LIGHT = 5
