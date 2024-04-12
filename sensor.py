@@ -29,24 +29,25 @@ class TemperatureHumidity():
 
 class Light():
     """开关类设备"""
-    def __init__(self, power, is_sensitive=False):
+    def __init__(self, power):
         """
         初始化开关类设备
         :param power:设备引脚
         :param is_sensitive:是否为光敏传感器，如果是把引脚设为1以读取值
         """
         self.power = power
-        if is_sensitive:
-            self.on()
+        self.power_state = False 
     
     def on(self):
         pcf.pin(self.power, 1)
+        self.power_state = True 
         
     def off(self):
         pcf.pin(self.power, 0)
+        self.power_state = False 
         
     def state(self):
-        return pcf.pin(self.power)
+        return self.power_state
 
 
         

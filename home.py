@@ -1,5 +1,7 @@
 import lvgl as lv
 
+from light import LightPage
+
 
 class HomePage():
     def __init__(self, scr, **kwargs):
@@ -21,6 +23,14 @@ class HomePage():
         head_label.add_style(style_head_label, 0)
         head_label.set_style_text_font(lv.font_montserrat_20, 0) # 字体像素大小
         head_label.set_text("My Home")
+        
+        # 悬浮返回按钮
+        self.back_btn = lv.btn(self.scr)
+        self.back_btn.set_size(40, 40)
+        self.back_btn.add_flag(lv.obj.FLAG.FLOATING)
+        self.back_btn.align(lv.ALIGN.BOTTOM_RIGHT, -10, -270)
+        self.back_btn.set_style_bg_img_src(lv.SYMBOL.NEW_LINE, 0)
+        self.back_btn.set_style_text_font(lv.theme_get_font_large(self.back_btn), 0)
         
         style_tab = lv.style_t()
         style_tab.init()
@@ -56,8 +66,8 @@ class HomePage():
         
         self.bedroom_light_btn = lv.btn(tab_bedroom)
         self.bedroom_light_btn.add_style(self.style_bedroom_light, 0)
-        # TODO: 按钮点击事件
-        #self.bedroom_light_btn.add_event_cb(self.conn_wifi,lv.EVENT.CLICKED, None)
+        self.bedroom_light_btn.add_event_cb(lambda e: self.light_click(e,
+            {"light":self.bedroom_light, "name":"BedroomLight", "style":self.style_bedroom_light}), lv.EVENT.CLICKED, None)
         
         with open('imgs/灯光.png', 'rb') as f:
             light_data = f.read()
@@ -130,7 +140,8 @@ class HomePage():
         self.living_light_btn = lv.btn(tab_livingroom)
         self.living_light_btn.add_style(self.style_living_light, 0)
         # TODO: 按钮点击事件
-        #self.bedroom_light_btn.add_event_cb(self.conn_wifi,lv.EVENT.CLICKED, None)
+        self.living_light_btn.add_event_cb(lambda e: self.light_click(e,
+            {"light":self.living_light, "name":"LivingLight", "style":self.style_living_light}), lv.EVENT.CLICKED, None)
         
         living_light_img = lv.img(self.living_light_btn)
         living_light_img.set_src(self.light_png)
@@ -325,7 +336,8 @@ class HomePage():
         self.kitchen_light_btn = lv.btn(tab_kitchen)
         self.kitchen_light_btn.add_style(self.style_kitchen_light, 0)
         # TODO: 按钮点击事件
-        #self.bedroom_light_btn.add_event_cb(self.conn_wifi,lv.EVENT.CLICKED, None)
+        self.kitchen_light_btn.add_event_cb(lambda e: self.light_click(e,                                                                       
+            {"light":self.kitchen_light, "name":"KitchenLight", "style":self.style_kitchen_light}), lv.EVENT.CLICKED, None)
         
         kitchen_light_img = lv.img(self.kitchen_light_btn)
         kitchen_light_img.set_src(self.light_png)
@@ -335,21 +347,17 @@ class HomePage():
         kitchen_light_img.set_size_mode(lv.img.SIZE_MODE.REAL)
         
         
-
-
-if __name__ == '__main__':
-    
-    from espidf import VSPI_HOST, HSPI_HOST
-    from ili9XXX import ili9341
-    from xpt2046 import xpt2046
-    from const import *
-
-    
-    disp = ili9341(miso=MISO, mosi=MOSI, clk=CLK, cs=CS, dc=DC, rst=RST,power=POWER,backlight=LED,#rot=0x80,
-                    power_on=1,backlight_on=1, spihost=VSPI_HOST, width=WIDTH, height=HEIGHT, factor=16,half_duplex=False)
-    touch = xpt2046(cs=T_CS, spihost=VSPI_HOST, mhz=5, max_cmds=16,half_duplex=False,
-                    cal_x0 = 3948, cal_y0 = 242, cal_x1 = 423, cal_y1 = 3783)
-
-    scr = lv.obj()
-    lv.scr_load(scr)
-    HomePage(scr)
+    def light_click(self, event, data=None):
+        """灯类点击事件"""
+        self.light_scr = lv.obj()
+        lv.scr_load(self.light_scr)
+        light_page = LightPage(self.light_scr, data['light'], self.light_png, data['name'])
+        light_page.back_btn.add_event_cb(lambda e:self.back_home_light(e, data['style'], data['light']),lv.EVENT.CLICKED, None)
+        
+    def back_home_light(self, e, style, light):
+        if light.state():
+            style.set_bg_color(lv.color_hex(0xFFDD00))
+        else:
+            style.set_bg_color(lv.color_hex(0xDCDCDC))
+        lv.scr_load(self.scr)
+        

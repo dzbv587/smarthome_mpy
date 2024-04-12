@@ -2,7 +2,7 @@ import lvgl as lv
 import time
 import network
 import urequests
-from machine import Timer, Pin
+from machine import Timer, Pin, reset
 
 from const import *
 from connect_wifi import ConnectWIFI
@@ -28,6 +28,13 @@ class IndexPage():
         self.wlan = network.WLAN(network.STA_IF) # 激活wifi
         self.wlan.active(True)
         # TODO: 连接wifi
+        with open('wifi_info.txt', 'r') as f:
+            ssid = f.readline().rstrip("\n")
+            password = f.readline().rstrip("\n")
+        print(ssid)
+        print(password)
+        self.wlan.config(reconnects=2)
+        self.wlan.connect(ssid, password)
         
         # 时间标签
         style_time_label = lv.style_t()
@@ -102,7 +109,7 @@ class IndexPage():
         self.weather_img.set_size(45, 45)
         self.weather_img.set_pos(10, -10)
         self.weather_img.set_size_mode(lv.img.SIZE_MODE.REAL)
-        self.weather_img.cache_set_size(7)
+        self.weather_img.cache_set_size(8)
         
         # WIFI按钮
         style_wifi_btn = lv.style_t()
@@ -184,7 +191,31 @@ class IndexPage():
         
         lv.timer_create(self.timer_cb, 1000, None) # 每秒刷新时间
         lv.timer_create(self.flush_dht, 5000, None ) # 每5秒刷新温湿度
-
+        
+        while not self.wlan.isconnected():
+            pass
+        self.connect_mqtt()
+        lv.timer_create(self.check_msg, 1000, None)
+        
+        
+    def MsgOK(self, topic, msg):          # 回调函数，用于收到消息
+        print((topic, msg))             # 打印主题值和消息值
+        if topic == BEDROOM_LIGHT_TOPIC.encode():     # 判断是不是发给myTopic的消息
+            if msg == b"on":                # 当收到on
+                print("rec on")
+            elif msg == b"off":             #  当收到off
+                print("rec off")
+                
+    def connect_mqtt(self):
+        self.client = MQTTClient(CLIENT_ID, SERVER_IP,PORT)
+        self.client.set_callback(self.MsgOK)
+        print('setback')
+        self.client.connect()
+        print('connect')
+        self.client.subscribe(BEDROOM_LIGHT_TOPIC)
+        
+    def check_msg(self, timer):
+        self.client.check_msg()
         
     def timer_cb(self, timer):
         """刷新时间标签"""
@@ -229,7 +260,6 @@ class IndexPage():
         code = e.get_code()
         obj = e.get_target() 
         lv.scr_load(self.scr)
-        self.wifi_scr.delete()
         # 更新wifi图标
         if self.wlan.isconnected():
             self.wifi_path = 'imgs/wifi_on.png'
@@ -255,19 +285,18 @@ class IndexPage():
             'kitchen_light': self.kitchen_light,
             }
         self.home_scr = lv.obj()
-        home_page = HomePage(self.home_scr, **kwargs)
         lv.scr_load(self.home_scr)
-#         wifi_page = ConnectWIFI(self.wifi_scr, self.wlan)
-#         wifi_page.back_btn.add_event_cb(self.back_index,lv.EVENT.CLICKED, None)
-        
+        home_page = HomePage(self.home_scr, **kwargs)
+        home_page.back_btn.add_event_cb(self.back_index,lv.EVENT.CLICKED, None)     
 
 
 if __name__ == '__main__':
-    
+    from umqtt.simple import MQTTClient
     from espidf import VSPI_HOST, HSPI_HOST
     from ili9XXX import ili9341
     from xpt2046 import xpt2046
     import fs_driver
+    import _thread
 
     
     disp = ili9341(miso=MISO, mosi=MOSI, clk=CLK, cs=CS, dc=DC, rst=RST,power=POWER,backlight=LED,#rot=0x80,
@@ -281,4 +310,7 @@ if __name__ == '__main__':
     scr = lv.scr_act()
     scr.clean()
     i = IndexPage(scr)
+    
+
+
    
