@@ -1,6 +1,7 @@
 import lvgl as lv
 
 from light import LightPage
+from fan import FanPage
 
 
 class HomePage():
@@ -151,6 +152,7 @@ class HomePage():
         living_light_img.set_size_mode(lv.img.SIZE_MODE.REAL)
         
         # 风扇按钮
+        self.living_fan = kwargs['living_fan']
         self.style_fan = lv.style_t()
         self.style_fan.init()
         self.style_fan.set_radius(10)
@@ -166,7 +168,8 @@ class HomePage():
         self.fan_btn = lv.btn(tab_livingroom)
         self.fan_btn.add_style(self.style_fan, 0)
         # TODO: 按钮点击事件
-        #self.bedroom_light_btn.add_event_cb(self.conn_wifi,lv.EVENT.CLICKED, None)
+        self.fan_btn.add_event_cb(lambda e: self.fan_click(e,
+            {"fan":self.living_fan, "name":"LivingFan", "style":self.style_fan}), lv.EVENT.CLICKED, None)
         
         with open('imgs/风扇.png', 'rb') as f:
             fan_data = f.read()
@@ -361,3 +364,9 @@ class HomePage():
             style.set_bg_color(lv.color_hex(0xDCDCDC))
         lv.scr_load(self.scr)
         
+    def fan_click(self, event, data=None):
+        """风扇点击事件"""
+        self.fan_scr = lv.obj()
+        lv.scr_load(self.fan_scr)
+        light_page = FanPage(self.fan_scr, data['fan'], self.fan_png, data['name'])
+        light_page.back_btn.add_event_cb(lambda e:self.back_home_light(e, data['style'], data['fan']),lv.EVENT.CLICKED, None)

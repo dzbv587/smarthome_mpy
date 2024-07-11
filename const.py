@@ -2,7 +2,13 @@
 CLIENT_ID = 'c6bf4f9e4bae40c598815ef1e543d616'
 SERVER_IP = 'bemfa.com'
 PORT = 9501
-BEDROOM_LIGHT_TOPIC = 'light002'
+BEDROOM_LIGHT_TOPIC = 'bedroomlight002'
+BEDROOM_SWITCH_TOPIC = 'bedroomswitch001'
+LIVINGROOM_LIGHT_TOPIC = 'livingroomlight002'
+LIVINGROOM_FAN_TOPIC = 'livingroomfan003'
+KITCHEN_LIGHT_TOPIC = 'kitchenlight002'
+CURTAIN_TOPIC = 'curtain009'
+WINDOW_TOPIC = 'window006'
 
 # 屏幕定义
 WIDTH = 240
@@ -58,7 +64,7 @@ LIVING_LIGHT_SEN = 2
 # 灯引脚
 LIVING_LIGHT = 1
 # 风扇引脚
-FAN = 2
+LIVING_FAN = 4
 # 温湿度传感器引脚
 TAH = 1
 

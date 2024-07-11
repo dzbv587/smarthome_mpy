@@ -66,7 +66,7 @@ class LightPage():
         self.style_time_btn.set_pad_ver(10)
         self.style_time_btn.set_pad_hor(15)
         self.style_time_btn.set_x(20)
-        self.style_time_btn.set_y(220)
+        self.style_time_btn.set_y(250)
         self.style_time_btn.set_border_width(3)
         self.style_time_btn.set_border_color(lv.palette_main(lv.PALETTE.GREY))
         

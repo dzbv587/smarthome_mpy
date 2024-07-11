@@ -1,40 +1,46 @@
 import lvgl as lv
 import time
+import ntptime
 import network
 import urequests
 from machine import Timer, Pin, reset
+from umqtt.simple import MQTTClient
 
 from const import *
 from connect_wifi import ConnectWIFI
 from home import HomePage
-from sensor import TemperatureHumidity, Light
+from cam import CameraPage
+from sensor import TemperatureHumidity, Light, Fan, Curtain, Sound, Touch, LightSensitive, RainSensitive
 
 class IndexPage():
     def __init__(self, scr):
         self.scr = scr
         self.time_now = time.localtime()
-        
-        self.bedroom_light = Light(BEDROOM_LIGHT)
-        self.bedroom_switch = Light(BEDROOM_SWITCH)
-        self.living_light = Light(LIVING_LIGHT)
-        self.kitchen_light = Light(KITCHEN_LIGHT)
-        self.dht11 = TemperatureHumidity(TAH)
-        
-#         self.dh = dht.DHT11(Pin(5))
-#         try:
-#             self.dh.measure() # 第一次执行异常，第二次正常
-#         except OSError as e:
-#             self.dh.measure()
         self.wlan = network.WLAN(network.STA_IF) # 激活wifi
+        #self.wlan.active(False)
         self.wlan.active(True)
-        # TODO: 连接wifi
+        print(self.wlan.scan())
+        
         with open('wifi_info.txt', 'r') as f:
             ssid = f.readline().rstrip("\n")
             password = f.readline().rstrip("\n")
         print(ssid)
         print(password)
-        self.wlan.config(reconnects=2)
+        self.wlan.config(reconnects=5)
         self.wlan.connect(ssid, password)
+        
+        self.bedroom_light = Light(BEDROOM_LIGHT)
+        self.bedroom_switch = Light(BEDROOM_SWITCH)
+        self.living_light = Light(LIVING_LIGHT)
+        self.living_fan = Fan(LIVING_FAN)
+        self.kitchen_light = Light(KITCHEN_LIGHT)
+        self.dht11 = TemperatureHumidity(TAH)
+        self.curtain = Curtain(CURTAIN_A, CURTAIN_B, CURTAIN_C, CURTAIN_D)
+        self.sound = Sound(SOUND)
+        self.touch = Touch(TOUCH)
+        self.lightness = LightSensitive(LIVING_LIGHT_SEN)
+        self.rain = RainSensitive(RAIN_SEN)
+        self.air = LightSensitive(AIR)
         
         # 时间标签
         style_time_label = lv.style_t()
@@ -191,20 +197,75 @@ class IndexPage():
         
         lv.timer_create(self.timer_cb, 1000, None) # 每秒刷新时间
         lv.timer_create(self.flush_dht, 5000, None ) # 每5秒刷新温湿度
+        self.tt = lv.timer_create(self.wait_wifi,1000, None )
+        self.tt.set_repeat_count(10)
+        self.touch_t = lv.timer_create(self.touchif,1000, None )
         
-        while not self.wlan.isconnected():
-            pass
-        self.connect_mqtt()
-        lv.timer_create(self.check_msg, 1000, None)
         
+    def wait_wifi(self, timer):
+        if self.wlan.isconnected():
+            self.tt.pause()
+            ntptime.NTP_DELTA = 3155644800   # 可选 UTC+8偏移时间（秒），不设置就是UTC0
+            #ntptime.host = 'ntp1.aliyun.com'  # 可选，ntp服务器，默认是"pool.ntp.org"
+            self.time_now = time.localtime()
+            self.wifi_path = 'imgs/wifi_on.png'
+            with open(self.wifi_path, 'rb') as f:
+                wifi_data = f.read()
+
+            self.wifi_png = lv.img_dsc_t({
+            'data_size': len(wifi_data),
+            'data': wifi_data
+            })
+            self.wifi_img.clean()
+            self.wifi_img.set_src(self.wifi_png)
+            self.flush_weather()
+            ntptime.settime()   # 修改设备时间,到这就已经设置好
+            self.connect_mqtt()
+            lv.timer_create(self.check_msg, 1000, None)
+            lv.timer_create(self.keep_client, 10000, None)
+            self.date_label.set_text('{0:0>4d}-{1:0>2d}-{2:0>2d} {3}'.format(self.time_now[0], self.time_now[1], self.time_now[2], WEEK_MAP[str(self.time_now[6])]))
+            del self.tt
         
     def MsgOK(self, topic, msg):          # 回调函数，用于收到消息
         print((topic, msg))             # 打印主题值和消息值
         if topic == BEDROOM_LIGHT_TOPIC.encode():     # 判断是不是发给myTopic的消息
-            if msg == b"on":                # 当收到on
-                print("rec on")
-            elif msg == b"off":             #  当收到off
-                print("rec off")
+            if b'on' in msg:                # 当收到on
+                self.bedroom_light.on()
+            elif b"off" in msg:             #  当收到off
+                self.bedroom_light.off()
+        elif topic == BEDROOM_SWITCH_TOPIC.encode():
+            if b'on' in msg:                # 当收到on
+                self.bedroom_switch.on()
+            elif b"off" in msg:             #  当收到off
+                self.bedroom_switch.off()
+        elif topic == SOUND_TOPIC.encode():
+            if b'on' in msg:                # 当收到on
+                self.sound.run(5)
+            elif b"off" in msg:             #  当收到off
+                self.sound.run(5)
+        elif topic == LIVINGROOM_FAN_TOPIC.encode():
+            if b'on' in msg:                # 当收到on
+                level = msg[3:].decode()
+                if level:
+                    self.living_fan.on(int(level))
+                else:
+                    self.living_fan.on()
+            elif b"off" in msg:             #  当收到off
+                self.living_fan.off()
+        elif topic == CURTAIN_TOPIC.encode():
+            if b'on' in msg:                # 当收到on
+                level = msg[3:].decode()
+                if level:
+                    self.curtain.num(int(level))
+                else:
+                    self.curtain.num(100)
+            elif b"off" in msg:             #  当收到off
+                self.curtain.num(0)
+        elif topic == WINDOW_TOPIC.encode():
+            if b'on' in msg:                # 当收到on
+                self.bedroom_switch.on()
+            elif b"off" in msg:             #  当收到off
+                self.bedroom_switch.off()
                 
     def connect_mqtt(self):
         self.client = MQTTClient(CLIENT_ID, SERVER_IP,PORT)
@@ -213,9 +274,21 @@ class IndexPage():
         self.client.connect()
         print('connect')
         self.client.subscribe(BEDROOM_LIGHT_TOPIC)
+        self.client.subscribe(BEDROOM_SWITCH_TOPIC)
+        self.client.subscribe(LIVINGROOM_LIGHT_TOPIC)
+        self.client.subscribe(LIVINGROOM_FAN_TOPIC)
+        self.client.subscribe(KITCHEN_LIGHT_TOPIC)
+        self.client.subscribe(CURTAIN_TOPIC)
+        self.client.subscribe(WINDOW_TOPIC)
+        self.client.subscribe(SOUND_TOPIC)
+        #self.client.subscribe(TEM_HUM_YOPIC)
+        
         
     def check_msg(self, timer):
         self.client.check_msg()
+    
+    def keep_client(self, timer):
+        self.client.ping()
         
     def timer_cb(self, timer):
         """刷新时间标签"""
@@ -228,6 +301,17 @@ class IndexPage():
         """刷新温湿度标签"""
         self.tem_hum = self.dht11.get_tem_hum()
         self.temp_label.set_text('Tem:{0:0>2d}  Hum:{1:0>2d}'.format(self.tem_hum['temperature'], self.tem_hum['humidity']))
+        
+        self.date_label.set_text('{0:0>4d}-{1:0>2d}-{2:0>2d} {3}'.format(self.time_now[0], self.time_now[1], self.time_now[2], WEEK_MAP[str(self.time_now[6])]))
+        if self.wlan.isconnected():
+            msg = '#{0}#{1}'.format(self.tem_hum['temperature'], self.tem_hum['humidity'])
+            try:
+                self.client.publish(TEM_HUM_YOPIC, msg)         
+                self.client.publish(LIGHTNESS_TOPIC, '#{}'.format(self.lightness.read()))
+                self.client.publish(RAIN_TOPIC, '#{}'.format(self.rain.read()))
+                self.client.publish(AIR_TOPIC, '#{}'.format(self.air.read_mq()))
+            except :
+                pass
     
     def flush_weather(self, e=None):
         """更新天气图标"""
@@ -251,8 +335,8 @@ class IndexPage():
         """连接wifi界面"""
         self.wifi_scr = lv.obj()
         lv.scr_load(self.wifi_scr)
-        wifi_page = ConnectWIFI(self.wifi_scr, self.wlan)
-        wifi_page.back_btn.add_event_cb(self.back_index,lv.EVENT.CLICKED, None)
+        self.wifi_page = ConnectWIFI(self.wifi_scr, self.wlan)
+        self.wifi_page.back_btn.add_event_cb(self.back_index,lv.EVENT.CLICKED, None)
     
     
     def back_index(self, e):
@@ -275,6 +359,13 @@ class IndexPage():
         self.wifi_img.clean()
         self.wifi_img.set_src(self.wifi_png)
         self.flush_weather()
+        try:
+            if self.wifi_page.flag:
+                self.tt = lv.timer_create(self.wait_wifi,1000, None )
+                self.tt.set_repeat_count(10)
+        except:
+            pass
+            
 
         
     def go_home(self, e):
@@ -282,12 +373,36 @@ class IndexPage():
             'bedroom_light': self.bedroom_light,
             'bedroom_switch': self.bedroom_switch,
             'living_light': self.living_light,
+            'living_fan': self.living_fan,
             'kitchen_light': self.kitchen_light,
+            'curtain': self.curtain,
             }
         self.home_scr = lv.obj()
         lv.scr_load(self.home_scr)
         home_page = HomePage(self.home_scr, **kwargs)
-        home_page.back_btn.add_event_cb(self.back_index,lv.EVENT.CLICKED, None)     
+        home_page.back_btn.add_event_cb(self.back_index,lv.EVENT.CLICKED, None)
+        
+    def touchif(self, e):
+        if self.touch.read():
+            print(1)
+            self.touch_t.pause()
+            self.go_camera()
+        
+    def go_camera(self):
+        self.camera_scr = lv.obj()
+        lv.scr_load(self.camera_scr)
+        self.camera_page = CameraPage(self.camera_scr)
+        self.camera_page.back_btn.add_event_cb(self.back_index_camera,lv.EVENT.CLICKED, None)
+        
+    def back_index_camera(self, e):
+        """回到首页"""
+        self.camera_page.t.pause()
+        self.camera_page.destory()
+        lv.scr_load(self.scr)
+        del self.camera_page.t
+        del self.camera_page
+        self.touch_t.ready()
+        
 
 
 if __name__ == '__main__':
